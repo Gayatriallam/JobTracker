@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Job Tracker</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+      body {
+        font-family: "Poppins", sans-serif;
+      }
+    </style>
+  </head>
+  <body
+    class="min-h-screen bg-gradient-to-br from-gray-50 to-purple-100 text-gray-900 dark:from-gray-900 dark:to-gray-800 dark:text-white"
+  >
+    <!-- Header -->
+    <header
+      class="flex items-center justify-between px-10 pt-8 pb-2 bg-transparent w-full fixed top-0 left-0 z-20"
+    >
+      <h1
+        class="text-4xl font-extrabold text-purple-700 dark:text-purple-400 select-none flex items-center"
+      >
+        <span class="mr-2">💼</span> Job Tracker
+      </h1>
+      <button
+        id="logoutBtn"
+        class="px-5 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-base shadow transition"
+      >
+        Logout
+      </button>
+    </header>
+    <!-- Main Content - All cards same width -->
+    <main class="pt-28 pb-8 px-4 flex flex-col gap-10 w-full max-w-4xl mx-auto">
+      <!-- Add Job: Card -->
+      <section
+        class="bg-white dark:bg-gray-900 p-6 rounded-2xl shadow-xl ring-1 ring-purple-100 dark:ring-purple-900 w-full"
+      >
+        <h2
+          class="text-2xl font-bold text-purple-600 dark:text-purple-300 mb-4"
+        >
+          Add Job
+        </h2>
+        <form id="jobForm" class="space-y-4">
+          <input
+            id="company"
+            type="text"
+            placeholder="Company"
+            class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+            required
+          />
+          <input
+            id="position"
+            type="text"
+            placeholder="Position"
+            class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+            required
+          />
+          <select
+            id="status"
+            class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+          >
+            <option value="applied">Applied</option>
+            <option value="interview">Interview</option>
+            <option value="offer">Offer</option>
+            <option value="rejected">Rejected</option>
+          </select>
+          <button
+            type="submit"
+            class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg shadow transition flex items-center gap-2"
+          >
+            ➕ Add Job
+          </button>
+        </form>
+      </section>
+
+      <!-- Job Status Overview: Card, classic/responsive chart -->
+      <section
+        class="bg-white dark:bg-gray-900 p-6 rounded-2xl shadow-xl ring-1 ring-purple-100 dark:ring-purple-900 w-full"
+      >
+        <h2
+          class="text-xl font-semibold text-purple-700 dark:text-purple-300 mb-4"
+        >
+          📊 Job Status Overview
+        </h2>
+        <div class="w-full flex justify-center">
+          <canvas
+            id="statusChart"
+            style="max-width: 380px; width: 100%"
+          ></canvas>
+        </div>
+      </section>
+
+      <!-- All Jobs Section - Card Grid -->
+      <section
+        id="jobs-section"
+        class="bg-white dark:bg-gray-900 p-8 rounded-2xl shadow-xl ring-1 ring-purple-100 dark:ring-purple-900 w-full"
+      >
+        <h3
+          class="text-2xl font-bold text-purple-700 dark:text-purple-300 mb-6"
+        >
+          All Jobs
+        </h3>
+        <div id="jobsGrid" class="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <!-- Cards render here -->
+        </div>
+      </section>
+    </main>
+    <script src="dashboard.js"></script>
+  </body>
+</html>

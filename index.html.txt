@@ -1,0 +1,425 @@
+index.html
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login/Register Form</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="container">
+      <div class="form-container sign-up-container">
+        <form id="registerForm">
+          <h1>Create Account</h1>
+          <input type="text" placeholder="Name" name="name" required />
+          <input type="email" placeholder="Email" name="email" required />
+          <input
+            type="password"
+            placeholder="Password"
+            name="password"
+            required
+          />
+          <button type="submit">Register</button>
+        </form>
+      </div>
+
+      <div class="form-container sign-in-container">
+        <form id="loginForm">
+          <h1>Sign in</h1>
+          <input type="email" placeholder="Email" name="email" required />
+          <input
+            type="password"
+            placeholder="Password"
+            name="password"
+            required
+          />
+          <button type="submit">Login</button>
+        </form>
+      </div>
+
+      <div class="overlay-container">
+        <div class="overlay">
+          <div class="overlay-panel overlay-left">
+            <h1>Welcome Back!</h1>
+            <p>
+              To keep connected with us please login with your personal info
+            </p>
+            <button class="ghost" id="signIn">Login</button>
+          </div>
+          <div class="overlay-panel overlay-right">
+            <h1>Hello, Friend!</h1>
+            <p>Enter your personal details and start your journey with us</p>
+            <button class="ghost" id="signUp">Register</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
+</html>
+server.js
+const express = require("express");
+const cors = require("cors");
+const dotenv = require("dotenv");
+const authRoutes = require("./routes/authRoutes");
+
+dotenv.config();
+
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+app.use("/api/auth", authRoutes);
+
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+db.js
+const { Pool } = require("pg");
+const dotenv = require("dotenv");
+
+dotenv.config();
+
+// DEBUG: Log DB config to check values
+console.log("Connecting with config:", {
+  user: process.env.DB_USER,
+  host: process.env.DB_HOST,
+  database: process.env.DB_NAME,
+  password: process.env.DB_PASSWORD,
+  port: process.env.DB_PORT,
+});
+
+const pool = new Pool({
+  user: process.env.DB_USER,
+  host: process.env.DB_HOST,
+  database: process.env.DB_NAME,
+  password: process.env.DB_PASSWORD,
+  port: process.env.DB_PORT,
+});
+
+module.exports = pool;
+authRoutes.js
+// server/routes/authRoutes.js
+const express = require("express");
+const router = express.Router();
+const { register, login } = require("../controllers/authController");
+
+// Route: POST /api/auth/register
+router.post("/register", register);
+
+// Route: POST /api/auth/login
+router.post("/login", login);
+
+module.exports = router;
+authController.js
+// server/controllers/authController.js
+const pool = require("../db");
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+
+exports.register = async (req, res) => {
+  const { username, email, password } = req.body;
+
+  try {
+    // Check if user already exists
+    const userCheck = await pool.query("SELECT * FROM users WHERE email = $1", [
+      email,
+    ]);
+    if (userCheck.rows.length > 0) {
+      return res.status(400).json({ message: "User already exists" });
+    }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Insert new user
+    const newUser = await pool.query(
+      "INSERT INTO users (username, email, password) VALUES ($1, $2, $3) RETURNING *",
+      [username, email, hashedPassword]
+    );
+
+    // Generate token
+    const token = jwt.sign(
+      { userId: newUser.rows[0].id },
+      process.env.JWT_SECRET,
+      { expiresIn: "1h" }
+    );
+
+    res.status(201).json({ message: "User registered successfully", token });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+exports.login = async (req, res) => {
+  const { email, password } = req.body;
+
+  try {
+    // Find user
+    const user = await pool.query("SELECT * FROM users WHERE email = $1", [
+      email,
+    ]);
+    if (user.rows.length === 0) {
+      return res.status(400).json({ message: "Invalid credentials" });
+    }
+
+    // Compare password
+    const isMatch = await bcrypt.compare(password, user.rows[0].password);
+    if (!isMatch) {
+      return res.status(400).json({ message: "Invalid credentials" });
+    }
+
+    // Generate token
+    const token = jwt.sign(
+      { userId: user.rows[0].id },
+      process.env.JWT_SECRET,
+      { expiresIn: "1h" }
+    );
+
+    res.status(200).json({ message: "Login successful", token });
+  } catch (err) {
+    console.error("❌ Registration Error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+script.js 
+const signUpButton = document.getElementById("signUp");
+const signInButton = document.getElementById("signIn");
+const container = document.querySelector(".container");
+
+signUpButton.addEventListener("click", () => {
+  container.classList.add("right-panel-active");
+});
+
+signInButton.addEventListener("click", () => {
+  container.classList.remove("right-panel-active");
+});
+
+// Register form submission
+const registerForm = document.getElementById("registerForm");
+registerForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+
+  const name = registerForm.name.value;
+  const email = registerForm.email.value;
+  const password = registerForm.password.value;
+
+  try {
+    const res = await fetch("http://localhost:5000/api/auth/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, email, password }),
+    });
+
+    const data = await res.json();
+    if (res.ok) {
+      alert("Registered successfully! Please login.");
+      container.classList.remove("right-panel-active"); // switch to login view
+    } else {
+      alert(data.message || "Registration failed");
+    }
+  } catch (err) {
+    alert("Error registering user");
+  }
+});
+
+// Login form submission
+const loginForm = document.getElementById("loginForm");
+loginForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+
+  const email = loginForm.email.value;
+  const password = loginForm.password.value;
+
+  try {
+    const res = await fetch("http://localhost:5000/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+
+    const data = await res.json();
+    if (res.ok) {
+      alert("Login successful");
+      // Redirect or perform post-login actions here
+    } else {
+      alert(data.message || "Login failed");
+    }
+  } catch (err) {
+    alert("Error logging in");
+  }
+});
+style.css
+/* Base Reset */
+* {
+  box-sizing: border-box;
+}
+body {
+  background: #f6f5f7;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  font-family: "Segoe UI", sans-serif;
+  margin: 0;
+}
+
+.container {
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.25), 0 10px 10px rgba(0, 0, 0, 0.22);
+  position: relative;
+  overflow: hidden;
+  width: 768px;
+  max-width: 100%;
+  min-height: 480px;
+}
+
+.form-container {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  transition: all 0.6s ease-in-out;
+}
+
+.sign-in-container {
+  left: 0;
+  width: 50%;
+  z-index: 2;
+}
+
+.container.right-panel-active .sign-in-container {
+  transform: translateX(100%);
+}
+
+.sign-up-container {
+  left: 0;
+  width: 50%;
+  opacity: 0;
+  z-index: 1;
+}
+
+.container.right-panel-active .sign-up-container {
+  transform: translateX(100%);
+  opacity: 1;
+  z-index: 5;
+  animation: show 0.6s;
+}
+
+@keyframes show {
+  0%,
+  49.99% {
+    opacity: 0;
+    z-index: 1;
+  }
+  50%,
+  100% {
+    opacity: 1;
+    z-index: 5;
+  }
+}
+
+form {
+  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+  padding: 0 50px;
+  height: 100%;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+
+input {
+  background: #eee;
+  border: none;
+  padding: 12px 15px;
+  margin: 8px 0;
+  width: 100%;
+}
+
+button {
+  border: none;
+  padding: 12px 45px;
+  background-color: #ff4b2b;
+  color: #fff;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  margin-top: 10px;
+  transition: transform 80ms ease-in;
+}
+
+button:active {
+  transform: scale(0.95);
+}
+
+button.ghost {
+  background: transparent;
+  border: 2px solid #fff;
+}
+
+.overlay-container {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 50%;
+  height: 100%;
+  overflow: hidden;
+  transition: transform 0.6s ease-in-out;
+  z-index: 100;
+}
+
+.container.right-panel-active .overlay-container {
+  transform: translateX(-100%);
+}
+
+.overlay {
+  background: linear-gradient(to right, #ff4b2b, #ff416c);
+  color: #fff;
+  position: relative;
+  left: -100%;
+  height: 100%;
+  width: 200%;
+  transform: translateX(0);
+  transition: transform 0.6s ease-in-out;
+}
+
+.container.right-panel-active .overlay {
+  transform: translateX(50%);
+}
+
+.overlay-panel {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 0 40px;
+  text-align: center;
+  top: 0;
+  height: 100%;
+  width: 50%;
+  transform: translateX(0);
+  transition: transform 0.6s ease-in-out;
+}
+
+.overlay-left {
+  transform: translateX(-20%);
+}
+
+.container.right-panel-active .overlay-left {
+  transform: translateX(0);
+}
+
+.overlay-right {
+  right: 0;
+  transform: translateX(0);
+}
+
+.container.right-panel-active .overlay-right {
+  transform: translateX(20%);
+}
+
