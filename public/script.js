@@ -13,6 +13,8 @@ if (signUpButton && signInButton && container) {
   });
 }
 
+const API_BASE = window.location.origin;
+
 // Register form submission
 const registerForm = document.getElementById("registerForm");
 if (registerForm) {
@@ -24,7 +26,7 @@ if (registerForm) {
     const password = registerForm.password.value;
 
     try {
-      const res = await fetch("http://localhost:5000/api/auth/register", {
+      const res = await fetch(`${API_BASE}/api/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, email, password }),
@@ -53,7 +55,7 @@ if (loginForm) {
     const password = loginForm.password.value;
 
     try {
-      const res = await fetch("http://localhost:5000/api/auth/login", {
+      const res = await fetch(`${API_BASE}/api/auth/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
